@@ -1,0 +1,155 @@
+---
+title: "Hints"
+format:
+  html:
+    toc: true
+---
+
+
+# Suggested Workflow
+
+1. Look at and take basic notes about final product. WALK.
+2. Mock up a grouped bar chart that looks in structure like final, review data structure. DRINK A BEVERAGE.
+3. Review inputs. DRAW OR PLAY MUSIC OR GO FOR A BIKE RIDE.
+4. Do what you can to get started.  CELEBRATE AND REVIEW.  GO FOR ANOTHER WALK OR SLEEP OR VEG OUT.  HANG WITH THE CAT. 
+
+*I need need need to break this down somehow.  What do I know and currently have onhand ?*
+
+## Look at final product
+
+1. Has 3 BpSs
+2. Each BpS has percent of past and present amounts of classes
+3. Some formatting
+
+
+## Mock up of grouped bar chart
+
+* have 3 groups
+* have same values per group
+* make up data
+
+```{r warnings = FALSE, message = FALSE}
+# Load necessary libraries
+library(tidyverse)
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Create the dataset
+data <- data.frame(
+  bps = rep(c("ecosystem A", "ecosystem B", "ecosystem C"), each = 10),
+  label = rep(c("A", "B", "C", "D", "E", "Agriculture", "Developed", "Water", "UN", "UE"), times = 3),
+  ref_cur = rep(c("refPercent", "currentPercent"), each = 15),
+  amount = sample(10:200, 30, replace = TRUE)
+)
+
+# Plot
+fake_plot <-
+  ggplot(data, aes(fill=(ref_cur), y=amount, x=label)) +
+  geom_col(width = 0.8, position = position_dodge()) +
+  coord_flip() +
+  facet_grid(. ~bps) +
+  labs(
+    title = "Succession Classes past and present",
+    subtitle = "Fake chart with fake data",
+    caption = "Data from landfire.gov",
+    x = "",
+    y = "Amount (units unknown")
+
+fake_plot
+
+```
+
+
+* then review data structurem head and tail (in case this clown tried to trick us)
+* where do we get this data?
+
+
+## Review inputs
+
+* What is in them?
+* What parts do I need?
+
+
+### bps_aoi_attributes
+
+```{r}
+bps_aoi_attributes <- read_csv("input_data/bps_aoi_attributes.csv")
+head(bps_aoi_attributes)
+tail(bps_aoi_attributes)
+```
+
+* Has total amounts of each BpS
+* I probably only need BPS_MODEL, BPS_NAME and some total amount (Freq or ACRES) so I can calculate percents later
+* Keep handy just in case
+* ALSO, after looking at the combine dataset I might to keep the VALUE field just in case
+
+### bps_model_number_name
+
+```{r}
+bps_model_number_name <- read_csv("input_data/bps_model_number_name.csv")
+head(bps_model_number_name)
+tail(bps_model_number_name)
+```
+
+* Not sure why I need this
+* This is B.S.
+
+### combine_raw
+
+```{r}
+combine_raw <- read_csv("input_data/combine_raw.csv")
+head(combine_raw)
+tail(combine_raw)
+```
+
+* what the?
+* I sorted by 'Var 1'.  Wait, I see that Var1 of '11' looks the same as VALUE '11' in the bps_aoi_attributes.  This is getting interesting.  I wonder if Var1 is the same as VALUE in the bps_aoi_attributes.  
+* I better keep that VALUE field just in case. 
+* **I need to get the current amounts of each class from this somehow and their labels**
+
+### LF16_BPS_200
+
+```{r}
+LF16_BPS_200 <- read_csv("input_data/LF16_BPS_200.csv")
+head(LF16_BPS_200)
+tail(LF16_BPS_200)
+```
+
+* This looks like bps_attributes_aoi, but much bigger.  
+* I hate this
+
+###  ref_con_modified
+
+```{r}
+ref_con_modified <- read_csv("input_data/ref_con_modified.csv")
+head(ref_con_modified)
+tail(ref_con_modified)
+```
+
+* has way more bpss than I need.  Dang will need to filter to my BpSs somehow
+* **I will need to pivot longer I think**
+
+
+### scls_aoi_attributes
+
+```{r}
+scls_aoi_attributes <- read_csv("input_data/scls_aoi_attributes.csv")
+head(scls_aoi_attributes)
+tail(scls_aoi_attributes)
+```
+
+* Has labels!  But how to merge?  Lemme look, do the VALUES match up with VAR2 in the combine?  
+
+
+## Do what you can to get started
+
+1. Pivot the ref_con and try to filter somehow.  I need to freaking filter by the bpss in the area of interest and then just by the top 3.  
+**How does that look**
+AND AND I need to keep something to merge by later I *think?*  'cause I need to connect the reference and current
+
+2. I think I need to merge in the s-class labels to the combine
+3. Oh and merge in thingies from the bps-aoi to the combine
+4. Now this is awesome
+5. Can I calculate percents of each s-class per BpS?  What the _____ does that give me?  What is this combine thing again?  Better look at the data dictionary
+
