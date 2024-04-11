@@ -153,3 +153,54 @@ AND AND I need to keep something to merge by later I *think?*  'cause I need to 
 4. Now this is awesome
 5. Can I calculate percents of each s-class per BpS?  What the _____ does that give me?  What is this combine thing again?  Better look at the data dictionary
 
+
+## Get Ref Con Wrangled
+
+```{r}
+
+ref_con <- ref_con_modified %>%
+  pivot_longer(!Model_Code, names_to = "refLabel", values_to = "refPercent") %>%
+  unite(model_label, c("Model_Code", "refLabel"), remove = FALSE) %>%
+  left_join(bps_model_number_name)
+
+
+# get list of aoi BpS model numbers
+
+aoi_bps_models <- bps_aoi_attributes$BPS_MODEL
+
+#subset ref_con to aoi, keeping all BpSs in the AOI for now
+aoi_ref_con <- subset(ref_con, Model_Code %in% aoi_bps_models)
+
+
+```
+
+
+## Get Current Wrangled and calculations made
+
+```{r}
+#bring in s-class labels
+combine <- left_join(combine_raw, 
+                  scls_aoi_attributes %>%
+                    dplyr::select(2, 4),  
+                  by = c("Var2" = "VALUE"))
+
+#bring in bps labels
+combine <- left_join(combine, 
+                  LF16_BPS_200 %>%
+                    dplyr::select(1:4),
+                  by = c("Var1" = "VALUE"))
+
+# calculate current sclass percents
+combine <- combine %>%
+  group_by(Var1, BPS_MODEL) %>%
+  mutate(total_count = sum(Freq)) %>%
+  mutate(currentPercent = as.integer((Freq/total_count)*100)) %>%
+  unite(model_label, c("BPS_MODEL", "LABEL"))
+
+## Note, in general percents for any one BpS should = 100, but may not due to water or 'noise'. They should be close. 
+
+## Also note Jaxson's comment in Slack---there may be missing sclass lables here if a class is not mapped on the current landscape.  For example, old-growth classes are often missing on the current landscape, but were important historically
+
+```
+
+
