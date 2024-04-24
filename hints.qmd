@@ -31,6 +31,7 @@ format:
 ```{r warnings = FALSE, message = FALSE}
 # Load necessary libraries
 library(tidyverse)
+library(janitor)
 
 # Set seed for reproducibility
 set.seed(123)
@@ -203,4 +204,93 @@ combine <- combine %>%
 
 ```
 
+
+
+## Put it all together
+
+```{r}
+aoi_ref_cur <- left_join(aoi_ref_con,
+                         combine) %>%
+                         drop_na(refPercent) %>%
+                         mutate(currentPercent = as.numeric(currentPercent),
+                                currentPercent = ifelse(is.na(currentPercent), 0, currentPercent)) %>%
+                         mutate(total_count = as.numeric(total_count),
+                                total_count = ifelse(is.na(total_count), 0, total_count)) %>%
+                         select(-c(BPS_CODE, ZONE)) %>%
+                         select(c(Freq,
+                                  Var1,
+                                  Var2,
+                                  BpS_Name,
+                                  Model_Code,
+                                  refLabel,
+                                  model_label,
+                                  refPercent,
+                                  currentPercent,
+                                  total_count)) %>%
+                          rename(count = Freq,
+                                 bps_value = Var1,
+                                 scl_value = Var2,
+                                 bps_name = BpS_Name) %>%
+                          clean_names() 
+```
+
+
+
+## Make Chart
+
+```{r}
+bps_scls_top <- aoi_ref_cur %>%
+  group_by(model_code) %>%
+  mutate(total_count = ifelse(total_count == 0, max(total_count), total_count)) %>%
+  arrange(desc(total_count))  %>%
+  ungroup() %>%
+  dplyr::filter(dense_rank(desc(total_count)) < 4) %>%
+  dplyr::select(c("bps_name", "ref_label",  "current_percent", "ref_percent")) %>%
+  pivot_longer(
+    cols = c(`ref_percent`, `current_percent`), 
+    names_to = "ref_cur", 
+    values_to = "percent"
+    )
+
+
+# order classes
+bps_scls_top$ref_label <- factor(bps_scls_top$ref_label, 
+                                 levels = c(
+  "Developed",
+  "Agriculture",
+  "UE",
+  "UN",
+  "E",
+  "D",
+  "C",
+  "B",
+  "A"))
+
+sclasplot <-
+  ggplot(bps_scls_top, aes(fill = factor(ref_cur), y = percent, x = ref_label)) + 
+  geom_col(width = 0.8, position = position_dodge()) +
+  coord_flip() +
+  facet_grid(. ~BpS) +
+  scale_x_discrete(limits = (levels(bps_scls_top$ref_label))) +
+  labs(
+    title = "Succession Classes past and present",
+    subtitle = "Top BpSs selected for illustration. Not all succession classes present in all BpSs",
+    caption = "Data from landfire.gov.",
+    x = "",
+    y = "Percent") +
+  theme_minimal(base_size = 12) +
+  theme(plot.caption = element_text(hjust = 0, face = "italic"), #Default is hjust=1
+        plot.title.position = "plot", #NEW parameter. Apply for subtitle too.
+        plot.caption.position =  "plot") +
+  scale_fill_manual(values = c("#3d4740", "#32a852" ), # present (grey), historical (green)
+                    name = " ", 
+                    labels = c("Present",
+                               "Past")) +
+  facet_wrap(~bps_name, nrow(3),labeller = labeller(bps_name = label_wrap_gen())) +
+    theme(panel.spacing = unit(.05, "lines"),
+        panel.border = element_rect(color = "black", fill = NA, size = 1), 
+        strip.background = element_rect(color = "black", size = 1))
+
+sclasplot
+```
 
